@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <script id="vertex-shader" type="x-shader/x-vertex">
+    attribute vec4 vPosition;
+    attribute float vSize;
+    attribute float alpha_angle;
+    attribute float aShape;
+    attribute vec4 aColor;
+    attribute float aBlink;
+    varying float time;
+    varying float vAlpha_angle;
+    varying float vShape;
+    varying vec4 vColor;
+    uniform float uTime;
+    void main(){
+        gl_Position = vPosition;
+        gl_PointSize = vSize * abs(sin(uTime * aBlink));
+        vAlpha_angle = alpha_angle;
+        time = uTime;
+        vShape = aShape;
+        vColor = aColor;
+    }
+    </script>
+    
+    <script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying float time;
+    varying float vAlpha_angle;
+    varying float vShape;
+    varying vec4 vColor;
+
+    mat2 rotate2d(float _angle){
+        return mat2(cos(_angle),-sin(_angle), sin(_angle),cos(_angle));
+    }
+   
+    vec2 getPos(vec2 p) {
+        return vec2(2.0, -2.0) * p - vec2(1.0, -1.0);
+    }
+    
+    void circle() {
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        
+        if ( dist > 1.0 ) {
+           discard;
+        }
+        if(dist > 0.9)
+            gl_FragColor.w = gl_FragColor.w * smoothstep(1.0, 0.9,dist);
+    }
+    
+    void square() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        float sqSide = sqrt(1.0/2.0);
+        if (abs(pixel.x) > sqSide ||
+            abs(pixel.y) > sqSide) {
+           discard;
+        }
+        if(abs(pixel.x) > sqSide-0.1) gl_FragColor.w = gl_FragColor.w * smoothstep(sqSide, sqSide-0.1, abs(pixel.x));
+        if(abs(pixel.y) > sqSide-0.1) gl_FragColor.w = gl_FragColor.w * smoothstep(sqSide, sqSide-0.1, abs(pixel.y));
+    }
+
+    void cross() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        if ((abs(pixel.x) > 0.25 &&
+            abs(pixel.y) > 0.25) || 
+            abs(pixel.x) > 1.0  ||
+            abs(pixel.y) > 1.0) {
+
+           discard;
+        }
+        if (abs(pixel.x) > 0.15 && abs(pixel.y) > 0.20){
+            gl_FragColor.w = gl_FragColor.w * smoothstep(0.25, 0.15, abs(pixel.x));
+        }
+        if (abs(pixel.y) > 0.15 && abs(pixel.x) > 0.20){
+            gl_FragColor.w = gl_FragColor.w * smoothstep(0.25, 0.15, abs(pixel.y));
+        }
+    }
+    
+    void ring() {
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        if(dist > 1.0 || dist < 0.75){
+            discard;
+        }   
+        if(dist > 0.9) gl_FragColor.w = gl_FragColor.w * smoothstep(1.0, 0.9,dist);
+        if(dist < 0.85) gl_FragColor.w = gl_FragColor.w * smoothstep(0.75, 0.85,dist);
+    }
+
+    void nosLogo() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        float angle = atan(pixel.y/pixel.x);
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        if(dist > 1.0 || dist < 0.6  || mod(angle, 0.6) > 0.225  ){
+            discard;
+        }
+    }
+
+    void wheel() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        if(dist > 1.0 || (dist < 0.8 && (dist > 0.4 && (abs(pixel.x) > 0.15 && abs(pixel.y) > 0.15)))){
+            discard;
+        }
+       
+    }
+    
+     void target() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        if((dist > 0.8 ||
+            dist < 0.7) && 
+            (dist > 0.5 || dist < 0.3) && (dist > 0.2 || dist < 0.1) ||
+            (pixel.x > 0.0 && pixel.x < 0.05 || pixel.y > 0.0 && pixel.y < 0.05)){
+            discard;
+        }
+    }
+    
+    void pacman() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        float dist = distance(vec2(0.0,0.0), getPos(gl_PointCoord));
+        if(dist > 0.9 || (pixel.y < pixel.x && pixel.y > 0.25*pixel.x)){
+        discard;
+        }
+    }
+    
+    void diamond() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        if(pixel.y > 2.0*pixel.x + 1.0 ||
+            pixel.y < 2.0*pixel.x - 1.0 ||
+            pixel.x > -0.5*pixel.y + 0.5 ||
+            pixel.x < -0.5*pixel.y-0.5) {
+            discard;
+        }
+    }
+    
+    void triangle() {
+        vec2 pixel = rotate2d(time * vAlpha_angle) * getPos(gl_PointCoord);
+        if(pixel.y < 0.0 || pixel.y > pixel.x + 1.0 || pixel.x > 0.0) {
+            discard;
+        }
+    }
+    
+    void main() {
+        gl_FragColor = vColor;
+        if(vShape == 0.0)
+            square(); 
+        else if(vShape == 1.0)
+            circle(); 
+        else if(vShape == 2.0)
+            cross();
+        else if(vShape == 3.0)
+             ring();
+        else if(vShape == 4.0)
+            nosLogo();
+        else if(vShape == 5.0)
+            wheel();
+        else if(vShape == 6.0)
+            target();
+        else if(vShape == 7.0)
+            pacman();
+        else if(vShape == 8.0)
+            diamond();
+        else if(vShape == 9.0)
+            triangle();
+        
+    }
+    
+    </script>
+    
+    <script type="text/javascript" src="../Common/webgl-utils.js">
+    </script>
+    
+    <script type="text/javascript" src="../Common/initShaders.js">
+    </script>
+    
+    <script type="text/javascript" src="../Common/MV.js">
+    </script>
+    
+    <script type="text/javascript" src="tp1.js">
+    </script>
+
+</head>
+<body>
+    <title>CGI Project1 2017/2018</title>
+    <div style="float:left">
+    <canvas id="gl-canvas" width="512" height="512">
+        Oops... your browser doesn't support the HTML5 canvas element"
+    </canvas></div>
+    <br>
+    <legend><h1> &emsp;&emsp;Menu:</h1>
+    </legend>
+    <div style="float:center">
+    &emsp;<button id="automaticToggle">Toggle Auto</button>
+    &emsp;<button id="bgButton">Set Background Color</button>
+    <p>
+    &emsp;<select id="selectShapeMenu">
+            <option value="0.0">Square</option>
+            <option value="1.0">Circle</option>
+            <option value="2.0">Cross</option>
+            <option value="3.0">Ring</option>
+            <option value="4.0">NOS</option>
+            <option value="5.0">Wheel</option>
+            <option value="6.0">Target</option>
+            <option value="7.0">Pacman</option>
+            <option value="8.0">Diamond</option>
+            <option value="9.0">Triangle</option>
+    </select>
+    &emsp;<button id="clearButton">Clear Shapes</button>
+       <br>
+    <div>
+        <br>
+            &emsp;RED:<br>
+            &emsp;0 <input id="rSlider" type="range" min="0.0" max="1.0" step="0.01" value="0.5"/> 255
+    </div>
+    &emsp;<div>
+            &emsp;GREEN:<br>
+            &emsp;0 <input id="gSlider" type="range" min="0.0" max="1.0" step="0.01" value="0.5"/> 255
+    </div>
+    &emsp;<div>
+            &emsp;BLUE:<br>
+            &emsp;0 <input id="bSlider" type="range" min="0.0" max="1.0" step="0.01" value="0.5"/> 255
+    </div>
+    &emsp;<div>
+            &emsp;ALPHA:<br>
+            &emsp;0 <input id="aSlider" type="range" min="0.0" max="1.0" step="0.01" value="1.0"/> 255
+    </div>
+        
+    <br>
+    &emsp;<canvas id="gl-canvas-color-preview" width="200" height="50"> Oops... your browser doesn't support the HTML5 canvas element"</canvas>
+</div>
+</body>
+</html>
